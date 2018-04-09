@@ -1,0 +1,134 @@
+Depth first search maze generation
+
+<canvas id="canvas" width="900" height="900">
+
+</canvas>
+
+<script>
+// cellWall = [N,E,S,W]  0=closed, 1=open
+function buildGrid(rows, columns) {
+    let grid = [];
+    for (let i = 0; i < rows; i++) {
+        grid[i] = [];
+        for (let j = 0; j < columns; j++) {
+            grid[i][j] = [0, 0, 0, 0];
+            grid[i][j].visited = false;
+        }
+    }
+    return grid
+}
+
+
+
+let rows = 50;
+let columns = 50;
+let dx = [1, 0, -1];
+let dy = [1, 0, -1];
+let x = Math.floor(Math.random() * columns);
+let y = Math.floor(Math.random() * rows);
+// we start from a random cell, by using recursion, we implement DFS to visit all the cells
+// note that due to the nature of DFS, it will make long corridor
+let ct = 0;
+
+let grid = buildGrid(rows, columns);
+let corridorWidth = 5;
+let linkDst = 10;
+let c = document.getElementById("canvas");
+let ctx = c.getContext("2d");
+let _visit = [
+    {x:1, y:0},
+    {x:-1, y:0},
+    {x:0, y:-1},
+    {x:0, y:1},
+];
+ctx.translate(corridorWidth, corridorWidth);
+
+let stackDepth = 0;
+
+visit(grid, x, y);
+function shuffleArray(array) {
+    let _a = array.slice();
+    let n = array.length;
+
+    for (let i = n - 1; i > 0; i--) {
+
+        // Pick a random index from 0 to i
+        let j = Math.floor(Math.random() * n);
+
+        // Swap arr[i] with the element at random index
+        let temp = _a[i];
+        _a[i] = _a[j];
+        _a[j] = temp;
+    }
+    return _a;
+}
+
+function visit(grid, x, y) {
+    grid[x][y].visited = true;
+
+    stackDepth = stackDepth + 1;
+    // generate a sequence of random order
+    let _v = shuffleArray(_visit);
+
+    _v.forEach(v => {
+        let xOffset = v.x;
+        let yOffset = v.y;
+        let newX = x + xOffset;
+        let newY = y + yOffset;
+        if (newX < 0 || newX === columns) {
+            return;
+        }
+        if (newY < 0 || newY === rows) {
+            return;
+        }
+        // we do not even to mark the wall :)
+        if (!grid[newX][newY].visited) {
+            //remove the wall between
+            if (dx === 1 && dy === 0) {
+                // this cell E, other cell W
+            } else if (dx === -1 && dy === 0) {
+                // this cell W, other cell E
+            } else if (dx === 0 && dy === 1) {
+                // this cell S, other cell N
+            } else if (dx === 0 && dy === -1) {
+                // this cell N, other cell S
+            }
+            // just draw a link from the 2 cells ?
+            drawLink(x, y , newX, newY);
+            visit(grid, newX, newY);
+        }
+    });
+    stackDepth = stackDepth - 1;
+}
+
+function drawLink(startX, startY, endX, endY) {
+    let x = startX * linkDst;
+    let y = startY * linkDst;
+    let ex = endX * linkDst;
+    let ey = endY * linkDst;
+    ct = ct + 1;
+    let r = Math.floor(stackDepth / 2);
+    let g = 0, b = 0;
+    if (r > 200) {
+        g = r - 200;
+        r = 200;
+    }
+    if (g > 200) {
+        b = g - 200;
+        g = 200;
+    }
+    //console.log(r);
+    setTimeout(() => {
+        ctx.save();
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        ctx.lineWidth = corridorWidth;
+        // better use d3 scale to map from screen to universe
+        ctx.beginPath();
+        ctx.moveTo(x ,y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.restore();
+    }, 5 * ct);
+}
+
+</script>
