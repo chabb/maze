@@ -19,9 +19,23 @@ function buildGrid(rows, columns) {
 }
 
 
+// keep it simple. we put map everywhere, we know the algo will just
+// scan adjacent element, so it's fine
+function buildWall(row, column) {
+    let walls = [];
+    for (let i = 0; i < rows * column; i++) {
+        walls[i] = [];
+        for (let j = 0; j < row * column; j++) {
+            walls[i][j] = 1;
+        }
+    }
+    return walls;
+}
 
-let rows = 50;
-let columns = 50;
+
+
+let rows = 20;
+let columns = 20;
 let dx = [1, 0, -1];
 let dy = [1, 0, -1];
 let x = Math.floor(Math.random() * columns);
@@ -45,7 +59,7 @@ ctx.translate(corridorWidth, corridorWidth);
 
 let stackDepth = 0;
 
-visit(grid, x, y);
+//visitBFS(grid, x, y);
 function shuffleArray(array) {
     let _a = array.slice();
     let n = array.length;
@@ -101,6 +115,43 @@ function visit(grid, x, y) {
     stackDepth = stackDepth - 1;
 }
 
+
+// more for visiting the maze :), but we can try to bend it for solving the maze
+function visitBFS(grid, x, y) {
+    let queue = [];
+    grid[x][y].visited = true;
+    let _v = shuffleArray(_visit);
+    let started = false;
+    while(queue.length !== 0 || !started) {
+        started = true;
+        _v.forEach(v => {
+            let xOffset = v.x;
+            let yOffset = v.y;
+            let newX = x + xOffset;
+            let newY = y + yOffset;
+            if (newX < 0 || newX === columns) {
+                return;
+            }
+            if (newY < 0 || newY === rows) {
+                return;
+            }
+            if (!grid[newX][newY].visited) {
+                queue.unshift({x : newX,  y: newY})
+                drawLink(x, y, newX, newY);
+            }
+        });
+        // take new node
+        let node = queue.shift();
+        console.log(node);
+        x = node.x;
+        y = node.y;
+        grid[x][y].visited = true;
+        _v = shuffleArray(_visit);
+    }
+
+
+}
+
 function drawLink(startX, startY, endX, endY) {
     let x = startX * linkDst;
     let y = startY * linkDst;
@@ -128,7 +179,97 @@ function drawLink(startX, startY, endX, endY) {
         ctx.lineTo(ex, ey);
         ctx.stroke();
         ctx.restore();
-    }, 5 * ct);
+    }, 10 * ct);
 }
+
+
+
+// walls are edges
+// how to pick edges from adj matrix ?
+//
+
+
+
+
+
+
+let walls = buildWall(rows, columns);
+let listOfWall = [];
+prismGenerator(grid, 10, 10);
+
+//At each step, Prim’s algorithm extends the maze using the lowest-weighted edge (potential direction)
+// connected to the existing maze.
+// If this edge would form a loop, it is discarded and the next-lowest-weighted edge is considered.
+// here i do not care about the weigth, we just pick the edge in random order and check for loop
+
+function prismGenerator(grid, cx, cy) {
+
+    let _v = shuffleArray(_visit);
+
+    grid[cx][cy].visited = true;
+    addWallsToList(_v);
+
+    while(listOfWall.length > 0) {
+        pickRandomWall();
+    }
+
+    function addWallsToList(_v) {
+        _v.forEach(v => {
+            let ex = cx + v.x;
+            let ey = cy + v.y;
+            if (ex < 0 || ex === columns) {
+                return;
+            }
+            if (ey < 0 || ey === rows) {
+                return;
+            }
+            let source = cx * rows + y;
+            let target = ex * rows + ey;
+
+            if (walls[source][target] === 1 && walls[target][source] === 1) {
+                listOfWall.push([cx, cy, ex, ey]);
+            }
+        });
+    }
+
+    function pickRandomWall() {
+        let idx = Math.floor(listOfWall.length * Math.random());
+
+        let wall = listOfWall[idx];
+        let x = wall[0], y = wall[1], ex = wall[2], ey = wall[3];
+
+
+        let visitedA = !grid[x][y].visited ? 1 : 0;
+        let visitedB = !grid[ex][ey].visited ? 1 : 0;
+        let source = x * rows + y;
+        let target = ex * rows + ey;
+
+        if (visitedA + visitedB === 1) {
+            //Make the wall a passage and mark the unvisited cell as part of the maze.
+            // Add the neighboring walls of the cell to the wall list.
+            walls[source][target] = 0;
+            walls[target][source] = 0;
+            drawLink(x, y, ex, ey);
+            if (grid[x][y].visited === false) {
+                grid[x][y].visited = true;
+                cx = x;
+                cy = y;
+                let _v = shuffleArray(_visit);
+                addWallsToList(_v)
+
+            } else if  (grid[ex][ey].visited === false) {
+                grid[ex][ey].visited = true;
+                cx = ex;
+                cy = ey;
+                let _v = shuffleArray(_visit);
+                addWallsToList(_v)
+            }
+        }
+        listOfWall.splice(idx, 1);
+        // look at 2 separating cells
+
+    }
+}
+
 
 </script>
